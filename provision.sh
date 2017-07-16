@@ -1,12 +1,46 @@
 #!/bin/bash
+#
+# The logic here is split in three parts:
+#
+#  1) Enable jessie-backports and update the system, then reboot, resulting
+#     in a 4.9 kernel and the latest BTRFS tools.
+#  2) Set up the block devices and volumes.
+#  3) Handle booting a configured systems
 
 set -x
+set -e
 
-if [ ! -d /etc/luks ]; then
+if uname -r | grep -E '^3\..*'; then
+  echo "deb http://ftp.uk.debian.org/debian jessie-backports main" > /etc/apt/sources.list.d/backports.list
+  cat <<-EOF > /etc/apt/preferences.d/backports-pin
+# Stable
+Package: *
+Pin: release a=jessie
+Pin-Priority: 500
+
+# Backports
+Package: *
+Pin: release a=jessie-backports
+Pin-Priority: 550
+EOF
   apt-get update
-  apt-get install -y btrfs-tools zsh tmux cryptsetup vim
+  apt-get install -y btrfs-tools cryptsetup linux-headers-amd64 vim
   apt-get upgrade -y
-  apt-get dist-upgrade
+  apt-get dist-upgrade -y
+  apt-get autoremove -y
+
+  set +x
+  echo "The system will now be shut down.  You will need to issue the"
+  echo "following command to power up and have the necessary guest"
+  echo "additions installed."
+  echo
+  echo "    vagrant reload --provision"
+  echo
+  set -x
+
+  shutdown -h now
+
+elif [ ! -d /etc/luks ]; then
 
   mkdir /etc/luks
   chmod 700 /etc/luks
@@ -46,3 +80,11 @@ else
 fi
 
 btrfs filesystem show /storage
+
+set +x
+echo
+echo "You may now simulate a disk failure and replacement:"
+echo
+echo "  sudo /vagrant/simulate-disk-failure.sh"
+echo
+set -x

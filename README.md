@@ -3,22 +3,40 @@
 This is an automated environment to set up LUKS + BTRFS RAID1 volume.  Once
 that's configured you can then simulate a failure.
 
-## Quick start
+For this to work it's neccessary to use the jessie-backports 4.9 kernel and
+btrfs-tools.  See the [[Kernel failure]] section below for what happens with
+the stock 3.16 kernel.
+
+## Usage
 
 1. First, start the system with the base provisioning, then restart it so we
    have the latest kernel, then SSH in to the instance.
 
-        vagrant up && vagrant reload --provision && vagrant ssh
+        vagrant plugin install vagrant-vbguest
+        vagrant up
+        vagrant reload --provision
+        vagrant ssh
 
 2. On the system simulate a disk failure and attempt to replace the failed
    disk.
 
         sudo /vagrant/simulate-disk-failure.sh
 
-## Kernel failure
+## Caveats
 
-Currently the failure and disk replacement results in the following kernel
-NULL pointer dereference:
+While debugging this the folks on irc:://freenode.net/#btrfs pointed me at
+some valuable links for this scenario:
+
+- Once only RW:
+  https://btrfs.wiki.kernel.org/index.php/Gotchas#raid1_volumes_only_mountable_once_RW_if_degraded
+- Incomplete chunk conversion:
+  https://btrfs.wiki.kernel.org/index.php/Gotchas#Incomplete_chunk_conversion
+
+## Kernel failure with stock debian jessie 3.16 kernel
+
+In the stock debian jessie 3.16 kernel it is not possible to replace a missing
+disk.  The failurel results in the following kernel NULL pointer dereference.
+
 
 ```
 [ 1414.906892] BTRFS: open /dev/mapper/crypt-btrfs1 failed
